@@ -12,6 +12,7 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.TextView;
 
+import com.wdullaer.materialdatetimepicker.date.DatePickerDialog;
 import com.wdullaer.materialdatetimepicker.time.TimePickerDialog;
 import com.wdullaer.materialdatetimepicker.time.Timepoint;
 
@@ -20,7 +21,7 @@ import java.util.Calendar;
 /**
  * A simple {@link Fragment} subclass.
  */
-public class TimePickerFragment extends Fragment implements TimePickerDialog.OnTimeSetListener {
+public class TimePickerFragment extends Fragment implements TimePickerDialog.OnTimeSetListener, DatePickerDialog.OnDateSetListener {
 
     private TextView timeTextView;
     private CheckBox mode24Hours;
@@ -117,6 +118,21 @@ public class TimePickerFragment extends Fragment implements TimePickerDialog.OnT
                         Log.d("TimePicker", "Dialog was cancelled");
                     }
                 });
+                tpd.setDateText("Nov 11, 2018");
+                tpd.setDateSwitchListener(new TimePickerDialog.OnToDateDialogListener()
+                {
+                    @Override
+                    public void onTimeSelection(TimePickerDialog view, int hourOfDay, int minute, int second)
+                    {
+                        Calendar now = Calendar.getInstance();
+                        DatePickerDialog.newInstance(
+                                TimePickerFragment.this,
+                                now.get(Calendar.YEAR),
+                                now.get(Calendar.MONTH),
+                                now.get(Calendar.DAY_OF_MONTH)).show(getFragmentManager(), "DatepickerdialogSwitcher");
+                    }
+                });
+
                 tpd.show(getFragmentManager(), "Timepickerdialog");
             }
         });
@@ -138,5 +154,11 @@ public class TimePickerFragment extends Fragment implements TimePickerDialog.OnT
         String secondString = second < 10 ? "0"+second : ""+second;
         String time = "You picked the following time: "+hourString+"h"+minuteString+"m"+secondString+"s";
         timeTextView.setText(time);
+    }
+
+    @Override
+    public void onDateSet(DatePickerDialog view, int year, int monthOfYear, int dayOfMonth)
+    {
+
     }
 }

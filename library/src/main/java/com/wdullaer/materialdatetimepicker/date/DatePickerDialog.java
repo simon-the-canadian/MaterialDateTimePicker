@@ -88,6 +88,7 @@ public class DatePickerDialog extends DialogFragment implements
     private static final String KEY_DEFAULT_VIEW = "default_view";
     private static final String KEY_TITLE = "title";
     private static final String KEY_OK_RESID = "ok_resid";
+    private static final String KEY_TIME_SWITCH_STRING = "time_switch_string";
     private static final String KEY_OK_STRING = "ok_string";
     private static final String KEY_OK_COLOR = "ok_color";
     private static final String KEY_CANCEL_RESID = "cancel_resid";
@@ -107,6 +108,7 @@ public class DatePickerDialog extends DialogFragment implements
 
     private Calendar mCalendar = Utils.trimToMidnight(Calendar.getInstance(getTimeZone()));
     private OnDateSetListener mCallBack;
+    private OnToTimeDialogListener mOnTimeDialogListener;
     private HashSet<OnDateChangedListener> mListeners = new HashSet<>();
     private DialogInterface.OnCancelListener mOnCancelListener;
     private DialogInterface.OnDismissListener mOnDismissListener;
@@ -139,6 +141,7 @@ public class DatePickerDialog extends DialogFragment implements
     private int mCancelResid = R.string.mdtp_cancel;
     private String mCancelString;
     private int mCancelColor = -1;
+    private String mTimeSwitchString;
     private Version mVersion;
     private TimeZone mTimezone;
     private DefaultDateRangeLimiter mDefaultLimiter = new DefaultDateRangeLimiter();
@@ -158,6 +161,21 @@ public class DatePickerDialog extends DialogFragment implements
      * The callback used to indicate the user is done filling in the date.
      */
     public interface OnDateSetListener {
+
+        /**
+         * @param view        The view associated with this listener.
+         * @param year        The year that was set.
+         * @param monthOfYear The month that was set (0-11) for compatibility
+         *                    with {@link java.util.Calendar}.
+         * @param dayOfMonth  The day of the month that was set.
+         */
+        void onDateSet(DatePickerDialog view, int year, int monthOfYear, int dayOfMonth);
+    }
+
+    /**
+     * The callback used to indicate the user is done filling in the date.
+     */
+    public interface OnToTimeDialogListener {
 
         /**
          * @param view        The view associated with this listener.
@@ -257,6 +275,7 @@ public class DatePickerDialog extends DialogFragment implements
         outState.putInt(KEY_DEFAULT_VIEW, mDefaultView);
         outState.putString(KEY_TITLE, mTitle);
         outState.putInt(KEY_OK_RESID, mOkResid);
+        outState.putString(KEY_TIME_SWITCH_STRING, mTimeSwitchString);
         outState.putString(KEY_OK_STRING, mOkString);
         outState.putInt(KEY_OK_COLOR, mOkColor);
         outState.putInt(KEY_CANCEL_RESID, mCancelResid);
@@ -289,6 +308,7 @@ public class DatePickerDialog extends DialogFragment implements
             mTitle = savedInstanceState.getString(KEY_TITLE);
             mOkResid = savedInstanceState.getInt(KEY_OK_RESID);
             mOkString = savedInstanceState.getString(KEY_OK_STRING);
+            mTimeSwitchString = savedInstanceState.getString(KEY_TIME_SWITCH_STRING);
             mOkColor = savedInstanceState.getInt(KEY_OK_COLOR);
             mCancelResid = savedInstanceState.getInt(KEY_CANCEL_RESID);
             mCancelString = savedInstanceState.getString(KEY_CANCEL_STRING);
@@ -385,6 +405,32 @@ public class DatePickerDialog extends DialogFragment implements
         else cancelButton.setText(mCancelResid);
         cancelButton.setVisibility(isCancelable() ? View.VISIBLE : View.GONE);
 
+        Button timeSwitchButton = view.findViewById(R.id.mdtp_date_or_time);
+        timeSwitchButton.setTypeface(TypefaceHelper.get(activity, "Roboto-Medium"));
+
+        if (mTimeSwitchString != null)
+        {
+            timeSwitchButton.setText(mTimeSwitchString);
+            timeSwitchButton.setOnClickListener(new OnClickListener()
+            {
+                @Override
+                public void onClick(View view)
+                {
+                    if (mOnTimeDialogListener != null)
+                    {
+                        mOnTimeDialogListener.onDateSet(DatePickerDialog.this, mCalendar.get(Calendar.YEAR),
+                                mCalendar.get(Calendar.MONTH), mCalendar.get(Calendar.DAY_OF_MONTH));
+                        dismiss();
+                    }
+                }
+            });
+            timeSwitchButton.setVisibility(View.VISIBLE);
+        }
+        else
+        {
+            timeSwitchButton.setVisibility(View.GONE);
+        }
+
         // If an accent color has not been set manually, get it from the context
         if (mAccentColor == -1) {
             mAccentColor = Utils.getAccentColorFromThemeIfAvailable(getActivity());
@@ -397,6 +443,8 @@ public class DatePickerDialog extends DialogFragment implements
         else okButton.setTextColor(mAccentColor);
         if (mCancelColor != -1) cancelButton.setTextColor(mCancelColor);
         else cancelButton.setTextColor(mAccentColor);
+        if (mOkColor != -1) timeSwitchButton.setTextColor(mOkColor);
+        else timeSwitchButton.setTextColor(mAccentColor);
 
         if (getDialog() == null) {
             view.findViewById(R.id.mdtp_done_background).setVisibility(View.GONE);
@@ -889,6 +937,24 @@ public class DatePickerDialog extends DialogFragment implements
     public void setCancelText(@StringRes int cancelResid) {
         mCancelString = null;
         mCancelResid = cancelResid;
+    }
+
+    /**
+     * Set the label for the button to switch to the time picker
+     * @param timeText A literal String to be used as the switch to time picker button label
+     */
+    @SuppressWarnings("unused")
+    public void setTimeText(String timeText) {
+        mTimeSwitchString = timeText;
+    }
+
+    /**
+     * Sets the listener for when the switch to time picker button is clicked
+     * @param onTimeDialogListener callback that will launch the time picker dialog
+     */
+    @SuppressWarnings("unused")
+    public void setTimeSwitchListener(OnToTimeDialogListener onTimeDialogListener) {
+        mOnTimeDialogListener = onTimeDialogListener;
     }
 
     /**

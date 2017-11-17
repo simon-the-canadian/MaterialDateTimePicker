@@ -13,31 +13,49 @@
      See the License for the specific language governing permissions and
      limitations under the License.
 -->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/mdtp_done_background"
-    android:layout_width="match_parent"
-    android:layout_height="56dp"
-    android:orientation="horizontal"
-    android:background="@android:color/transparent"
-    android:gravity="end|right"
-    android:layout_gravity="center_vertical"
-    android:paddingBottom="8dp">
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+				xmlns:tools="http://schemas.android.com/tools"
+				android:id="@+id/mdtp_done_background"
+				android:layout_width="match_parent"
+				android:layout_height="56dp"
+				android:background="@android:color/transparent"
+				android:layout_gravity="center_vertical"
+				android:paddingBottom="8dp">
 
-    <Button
-        android:id="@+id/mdtp_cancel"
-        android:layout_height="wrap_content"
-        android:layout_width="wrap_content"
-        android:layout_marginRight="8dp"
-        android:layout_marginEnd="8dp"
-        style="@style/mdtp_ActionButton.Text"
-        android:text="@string/mdtp_cancel" />
+	<Button
+			android:id="@+id/mdtp_date_or_time"
+			android:layout_height="wrap_content"
+			android:layout_width="wrap_content"
+			android:layout_toLeftOf="@+id/mdtp_cancel"
+			android:layout_toStartOf="@+id/mdtp_cancel"
+			android:layout_alignParentStart="true"
+			android:layout_alignParentLeft="true"
+			android:gravity="start|center_vertical"
+			android:layout_marginLeft="8dp"
+			android:layout_marginStart="8dp"
+			android:layout_marginRight="8dp"
+			android:layout_marginEnd="8dp"
+			android:visibility="gone"
+			style="@style/mdtp_ActionButton.Text"
+			tools:text="Nov 17, 2017"/>
 
-    <Button
-        android:id="@+id/mdtp_ok"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginRight="16dp"
-        android:layout_marginEnd="16dp"
-        style="@style/mdtp_ActionButton.Text"
-        android:text="@string/mdtp_ok" />
-</LinearLayout>
+	<Button
+			android:id="@+id/mdtp_cancel"
+			android:layout_height="wrap_content"
+			android:layout_width="wrap_content"
+			android:layout_toLeftOf="@+id/mdtp_ok"
+			android:layout_toStartOf="@+id/mdtp_ok"
+			style="@style/mdtp_ActionButton.Text"
+			android:text="@string/mdtp_cancel"/>
+
+	<Button
+			android:id="@+id/mdtp_ok"
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:layout_marginRight="16dp"
+			android:layout_marginEnd="16dp"
+			android:layout_alignParentEnd="true"
+			android:layout_alignParentRight="true"
+			style="@style/mdtp_ActionButton.Text"
+			android:text="@string/mdtp_ok"/>
+</RelativeLayout>

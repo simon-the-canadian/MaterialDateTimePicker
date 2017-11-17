@@ -11,13 +11,14 @@ import android.widget.CheckBox;
 import android.widget.TextView;
 
 import com.wdullaer.materialdatetimepicker.date.DatePickerDialog;
+import com.wdullaer.materialdatetimepicker.time.TimePickerDialog;
 
 import java.util.Calendar;
 
 /**
  * A simple {@link Fragment} subclass.
  */
-public class DatePickerFragment extends Fragment implements DatePickerDialog.OnDateSetListener {
+public class DatePickerFragment extends Fragment implements DatePickerDialog.OnDateSetListener, TimePickerDialog.OnTimeSetListener {
 
     private TextView dateTextView;
     private CheckBox modeDarkDate;
@@ -108,6 +109,22 @@ public class DatePickerFragment extends Fragment implements DatePickerDialog.OnD
                     }
                     dpd.setSelectableDays(days);
                 }
+                dpd.setTimeText("11:00 AM");
+                dpd.setTimeSwitchListener(new DatePickerDialog.OnToTimeDialogListener()
+                {
+                    @Override
+                    public void onDateSet(DatePickerDialog view, int year, int monthOfYear, int dayOfMonth)
+                    {
+                        Calendar now = Calendar.getInstance();
+
+                        TimePickerDialog.newInstance(
+                                DatePickerFragment.this,
+                                now.get(Calendar.HOUR_OF_DAY),
+                                now.get(Calendar.MINUTE),
+                                true).show(getFragmentManager(), "TimepickerdialogSwitcher");
+                    }
+                });
+
                 dpd.show(getFragmentManager(), "Datepickerdialog");
             }
         });
@@ -126,5 +143,11 @@ public class DatePickerFragment extends Fragment implements DatePickerDialog.OnD
     public void onDateSet(DatePickerDialog view, int year, int monthOfYear, int dayOfMonth) {
         String date = "You picked the following date: "+dayOfMonth+"/"+(++monthOfYear)+"/"+year;
         dateTextView.setText(date);
+    }
+
+    @Override
+    public void onTimeSet(TimePickerDialog view, int hourOfDay, int minute, int second)
+    {
+
     }
 }

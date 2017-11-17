@@ -85,6 +85,7 @@ public class TimePickerDialog extends DialogFragment implements
     private static final String KEY_ENABLE_MINUTES = "enable_minutes";
     private static final String KEY_OK_RESID = "ok_resid";
     private static final String KEY_OK_STRING = "ok_string";
+    private static final String KEY_DATE_SWITCH_STRING = "date_switch_string";
     private static final String KEY_OK_COLOR = "ok_color";
     private static final String KEY_CANCEL_RESID = "cancel_resid";
     private static final String KEY_CANCEL_STRING = "cancel_string";
@@ -102,6 +103,7 @@ public class TimePickerDialog extends DialogFragment implements
     private static final int PULSE_ANIMATOR_DELAY = 300;
 
     private OnTimeSetListener mCallback;
+    private OnToDateDialogListener mOnDateDialogListener;
     private DialogInterface.OnCancelListener mOnCancelListener;
     private DialogInterface.OnDismissListener mOnDismissListener;
 
@@ -109,6 +111,7 @@ public class TimePickerDialog extends DialogFragment implements
 
     private Button mCancelButton;
     private Button mOkButton;
+    private Button mDateSwitchButton;
     private TextView mHourView;
     private TextView mHourSpaceView;
     private TextView mMinuteView;
@@ -141,6 +144,7 @@ public class TimePickerDialog extends DialogFragment implements
     private int mOkColor;
     private int mCancelResid;
     private String mCancelString;
+    private String mDateSwitchString;
     private int mCancelColor;
     private Version mVersion;
     private DefaultTimepointLimiter mDefaultLimiter = new DefaultTimepointLimiter();
@@ -177,6 +181,17 @@ public class TimePickerDialog extends DialogFragment implements
          * @param second The second that was set
          */
         void onTimeSet(TimePickerDialog view, int hourOfDay, int minute, int second);
+    }
+
+    public interface OnToDateDialogListener {
+
+        /**
+         * @param view The view associated with this listener.
+         * @param hourOfDay The hour that was set.
+         * @param minute The minute that was set.
+         * @param second The second that was set
+         */
+        void onTimeSelection(TimePickerDialog view, int hourOfDay, int minute, int second);
     }
 
     public TimePickerDialog() {
@@ -560,6 +575,24 @@ public class TimePickerDialog extends DialogFragment implements
     }
 
     /**
+     * Set the label for the button to switch to the date picker
+     * @param dateText A literal String to be used as the switch to date picker button label
+     */
+    @SuppressWarnings("unused")
+    public void setDateText(String dateText) {
+        mDateSwitchString = dateText;
+    }
+
+    /**
+     * Sets the listener for when the switch to date picker button is clicked
+     * @param onDateDialogListener callback that will launch the date picker dialog
+     */
+    @SuppressWarnings("unused")
+    public void setDateSwitchListener(OnToDateDialogListener onDateDialogListener) {
+        mOnDateDialogListener = onDateDialogListener;
+    }
+
+    /**
      * Set which layout version the picker should use
      * @param version The version to use
      */
@@ -609,6 +642,7 @@ public class TimePickerDialog extends DialogFragment implements
             mEnableMinutes = savedInstanceState.getBoolean(KEY_ENABLE_MINUTES);
             mOkResid = savedInstanceState.getInt(KEY_OK_RESID);
             mOkString = savedInstanceState.getString(KEY_OK_STRING);
+            mDateSwitchString = savedInstanceState.getString(KEY_DATE_SWITCH_STRING);
             mOkColor = savedInstanceState.getInt(KEY_OK_COLOR);
             mCancelResid = savedInstanceState.getInt(KEY_CANCEL_RESID);
             mCancelString = savedInstanceState.getString(KEY_CANCEL_STRING);
@@ -739,6 +773,9 @@ public class TimePickerDialog extends DialogFragment implements
         if(mOkString != null) mOkButton.setText(mOkString);
         else mOkButton.setText(mOkResid);
 
+        mDateSwitchButton = view.findViewById(R.id.mdtp_date_or_time);
+        mDateSwitchButton.setTypeface(TypefaceHelper.get(context, "Roboto-Medium"));
+
         mCancelButton = view.findViewById(R.id.mdtp_cancel);
         mCancelButton.setOnClickListener(new OnClickListener() {
             @Override
@@ -751,6 +788,28 @@ public class TimePickerDialog extends DialogFragment implements
         if(mCancelString != null) mCancelButton.setText(mCancelString);
         else mCancelButton.setText(mCancelResid);
         mCancelButton.setVisibility(isCancelable() ? View.VISIBLE : View.GONE);
+
+        if (mDateSwitchString != null)
+        {
+            mDateSwitchButton.setText(mDateSwitchString);
+            mDateSwitchButton.setOnClickListener(new OnClickListener()
+            {
+                @Override
+                public void onClick(View view)
+                {
+                    if (mOnDateDialogListener != null)
+                    {
+                        mOnDateDialogListener.onTimeSelection(TimePickerDialog.this, mTimePicker.getHours(), mTimePicker.getMinutes(), mTimePicker.getSeconds());
+                        dismiss();
+                    }
+                }
+            });
+            mDateSwitchButton.setVisibility(View.VISIBLE);
+        }
+        else
+        {
+            mDateSwitchButton.setVisibility(View.GONE);
+        }
 
         // Enable or disable the AM/PM view.
         if (mIs24HourMode) {
@@ -971,6 +1030,10 @@ public class TimePickerDialog extends DialogFragment implements
         // Button text can have a different color
         if (mOkColor != -1) mOkButton.setTextColor(mOkColor);
         else mOkButton.setTextColor(mAccentColor);
+
+        if (mOkColor != -1) mDateSwitchButton.setTextColor(mOkColor);
+        else mDateSwitchButton.setTextColor(mAccentColor);
+
         if (mCancelColor != -1) mCancelButton.setTextColor(mCancelColor);
         else mCancelButton.setTextColor(mAccentColor);
 
@@ -1082,6 +1145,7 @@ public class TimePickerDialog extends DialogFragment implements
             outState.putBoolean(KEY_ENABLE_MINUTES, mEnableMinutes);
             outState.putInt(KEY_OK_RESID, mOkResid);
             outState.putString(KEY_OK_STRING, mOkString);
+            outState.putString(KEY_DATE_SWITCH_STRING, mDateSwitchString);
             outState.putInt(KEY_OK_COLOR, mOkColor);
             outState.putInt(KEY_CANCEL_RESID, mCancelResid);
             outState.putString(KEY_CANCEL_STRING, mCancelString);
