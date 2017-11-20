@@ -184,7 +184,7 @@ public class DatePickerDialog extends DialogFragment implements
          *                    with {@link java.util.Calendar}.
          * @param dayOfMonth  The day of the month that was set.
          */
-        void onDateSet(DatePickerDialog view, int year, int monthOfYear, int dayOfMonth);
+        void onDateSelection(DatePickerDialog view, int year, int monthOfYear, int dayOfMonth);
     }
 
     /**
@@ -418,7 +418,7 @@ public class DatePickerDialog extends DialogFragment implements
                 {
                     if (mOnTimeDialogListener != null)
                     {
-                        mOnTimeDialogListener.onDateSet(DatePickerDialog.this, mCalendar.get(Calendar.YEAR),
+                        mOnTimeDialogListener.onDateSelection(DatePickerDialog.this, mCalendar.get(Calendar.YEAR),
                                 mCalendar.get(Calendar.MONTH), mCalendar.get(Calendar.DAY_OF_MONTH));
                         dismiss();
                     }

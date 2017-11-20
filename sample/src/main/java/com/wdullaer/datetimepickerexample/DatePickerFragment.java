@@ -113,7 +113,7 @@ public class DatePickerFragment extends Fragment implements DatePickerDialog.OnD
                 dpd.setTimeSwitchListener(new DatePickerDialog.OnToTimeDialogListener()
                 {
                     @Override
-                    public void onDateSet(DatePickerDialog view, int year, int monthOfYear, int dayOfMonth)
+                    public void onDateSelection(DatePickerDialog view, int year, int monthOfYear, int dayOfMonth)
                     {
                         Calendar now = Calendar.getInstance();
 
