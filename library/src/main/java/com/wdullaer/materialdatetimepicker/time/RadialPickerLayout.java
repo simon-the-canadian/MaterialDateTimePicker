@@ -22,9 +22,9 @@ import android.content.Context;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.support.annotation.NonNull;
-import android.support.v4.content.ContextCompat;
-import android.support.v4.view.accessibility.AccessibilityNodeInfoCompat;
+import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat;
 import android.text.format.DateUtils;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -157,10 +157,11 @@ public class RadialPickerLayout extends FrameLayout implements OnTouchListener {
     /**
      * Initialize the Layout with starting values.
      * @param context A context needed to inflate resources
+     * @param locale A Locale to be used when generating strings
      * @param initialTime The initial selection of the Timepicker
      * @param is24HourMode Indicates whether we should render in 24hour mode or with AM/PM selectors
      */
-    public void initialize(Context context, TimePickerController timePickerController,
+    public void initialize(Context context, Locale locale, TimePickerController timePickerController,
             Timepoint initialTime, boolean is24HourMode) {
         if (mTimeInitialized) {
             Log.e(TAG, "Time has already been initialized.");
@@ -174,33 +175,24 @@ public class RadialPickerLayout extends FrameLayout implements OnTouchListener {
         mCircleView.initialize(context, mController);
         mCircleView.invalidate();
         if (!mIs24HourMode && mController.getVersion() == TimePickerDialog.Version.VERSION_1) {
-            mAmPmCirclesView.initialize(context, mController, initialTime.isAM() ? AM : PM);
+            mAmPmCirclesView.initialize(context, locale, mController, initialTime.isAM() ? AM : PM);
             mAmPmCirclesView.invalidate();
         }
 
         // Create the selection validators
-        RadialTextsView.SelectionValidator secondValidator = new RadialTextsView.SelectionValidator() {
-            @Override
-            public boolean isValidSelection(int selection) {
-                Timepoint newTime = new Timepoint(mCurrentTime.getHour(), mCurrentTime.getMinute(), selection);
-                return !mController.isOutOfRange(newTime, SECOND_INDEX);
-            }
+        RadialTextsView.SelectionValidator secondValidator = selection -> {
+            Timepoint newTime = new Timepoint(mCurrentTime.getHour(), mCurrentTime.getMinute(), selection);
+            return !mController.isOutOfRange(newTime, SECOND_INDEX);
         };
-        RadialTextsView.SelectionValidator minuteValidator = new RadialTextsView.SelectionValidator() {
-            @Override
-            public boolean isValidSelection(int selection) {
-                Timepoint newTime = new Timepoint(mCurrentTime.getHour(), selection, mCurrentTime.getSecond());
-                return !mController.isOutOfRange(newTime, MINUTE_INDEX);
-            }
+        RadialTextsView.SelectionValidator minuteValidator = selection -> {
+            Timepoint newTime = new Timepoint(mCurrentTime.getHour(), selection, mCurrentTime.getSecond());
+            return !mController.isOutOfRange(newTime, MINUTE_INDEX);
         };
-        RadialTextsView.SelectionValidator hourValidator = new RadialTextsView.SelectionValidator() {
-            @Override
-            public boolean isValidSelection(int selection) {
-                Timepoint newTime = new Timepoint(selection, mCurrentTime.getMinute(), mCurrentTime.getSecond());
-                if(!mIs24HourMode && getIsCurrentlyAmOrPm() == PM) newTime.setPM();
-                if(!mIs24HourMode && getIsCurrentlyAmOrPm() == AM) newTime.setAM();
-                return !mController.isOutOfRange(newTime, HOUR_INDEX);
-            }
+        RadialTextsView.SelectionValidator hourValidator = selection -> {
+            Timepoint newTime = new Timepoint(selection, mCurrentTime.getMinute(), mCurrentTime.getSecond());
+            if(!mIs24HourMode && getIsCurrentlyAmOrPm() == PM) newTime.setPM();
+            if(!mIs24HourMode && getIsCurrentlyAmOrPm() == AM) newTime.setAM();
+            return !mController.isOutOfRange(newTime, HOUR_INDEX);
         };
 
         // Initialize the hours and minutes numbers.
@@ -214,10 +206,10 @@ public class RadialPickerLayout extends FrameLayout implements OnTouchListener {
         String[] secondsTexts = new String[12];
         for (int i = 0; i < 12; i++) {
             hoursTexts[i] = is24HourMode?
-                    String.format(Locale.getDefault(), "%02d", hours_24[i]) : String.format(Locale.getDefault(), "%d", hours[i]);
-            innerHoursTexts[i] = String.format(Locale.getDefault(), "%d", hours[i]);
-            minutesTexts[i] = String.format(Locale.getDefault(), "%02d", minutes[i]);
-            secondsTexts[i] = String.format(Locale.getDefault(), "%02d", seconds[i]);
+                    String.format(locale, "%02d", hours_24[i]) : String.format(locale, "%d", hours[i]);
+            innerHoursTexts[i] = String.format(locale, "%d", hours[i]);
+            minutesTexts[i] = String.format(locale, "%02d", minutes[i]);
+            secondsTexts[i] = String.format(locale, "%02d", seconds[i]);
         }
         // The version 2 layout has the hours > 12 on the inner circle rather than the outer circle
         // Inner circle and outer circle should be swapped (see #411)
@@ -747,12 +739,9 @@ public class RadialPickerLayout extends FrameLayout implements OnTouchListener {
                     // in case the user moves their finger quickly.
                     mController.tryVibrate();
                     mDownDegrees = -1;
-                    mHandler.postDelayed(new Runnable() {
-                        @Override
-                        public void run() {
-                            mAmPmCirclesView.setAmOrPmPressed(mIsTouchingAmOrPm);
-                            mAmPmCirclesView.invalidate();
-                        }
+                    mHandler.postDelayed(() -> {
+                        mAmPmCirclesView.setAmOrPmPressed(mIsTouchingAmOrPm);
+                        mAmPmCirclesView.invalidate();
                     }, TAP_TIMEOUT);
                 } else {
                     // If we're in accessibility mode, force the touch to be legal. Otherwise,
@@ -766,17 +755,14 @@ public class RadialPickerLayout extends FrameLayout implements OnTouchListener {
                         // If it's a legal touch, set that number as "selected" after the
                         // TAP_TIMEOUT in case the user moves their finger quickly.
                         mController.tryVibrate();
-                        mHandler.postDelayed(new Runnable() {
-                            @Override
-                            public void run() {
-                                mDoingMove = true;
-                                mLastValueSelected = getTimeFromDegrees(mDownDegrees, isInnerCircle[0],
-                                        false);
-                                mLastValueSelected = roundToValidTime(mLastValueSelected, getCurrentItemShowing());
-                                // Redraw
-                                reselectSelector(mLastValueSelected, true, getCurrentItemShowing());
-                                mListener.onValueSelected(mLastValueSelected);
-                            }
+                        mHandler.postDelayed(() -> {
+                            mDoingMove = true;
+                            mLastValueSelected = getTimeFromDegrees(mDownDegrees, isInnerCircle[0],
+                                    false);
+                            mLastValueSelected = roundToValidTime(mLastValueSelected, getCurrentItemShowing());
+                            // Redraw
+                            reselectSelector(mLastValueSelected, true, getCurrentItemShowing());
+                            mListener.onValueSelected(mLastValueSelected);
                         }, TAP_TIMEOUT);
                     }
                 }
@@ -906,19 +892,15 @@ public class RadialPickerLayout extends FrameLayout implements OnTouchListener {
      * in the circle.
      */
     @Override
-    @SuppressWarnings("deprecation")
     public void onInitializeAccessibilityNodeInfo(@NonNull AccessibilityNodeInfo info) {
         super.onInitializeAccessibilityNodeInfo(info);
         if (Build.VERSION.SDK_INT >= 21) {
             info.addAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_BACKWARD);
             info.addAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_FORWARD);
         }
-        else if (Build.VERSION.SDK_INT >= 16) {
+        else {
             info.addAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD);
             info.addAction(AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD);
-        } else {
-            info.addAction(AccessibilityNodeInfoCompat.ACTION_SCROLL_FORWARD);
-            info.addAction(AccessibilityNodeInfoCompat.ACTION_SCROLL_BACKWARD);
         }
     }
 

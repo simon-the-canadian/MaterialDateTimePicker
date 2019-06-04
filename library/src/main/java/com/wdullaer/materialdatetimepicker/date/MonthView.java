@@ -26,11 +26,11 @@ import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.os.Build;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
-import android.support.v4.content.ContextCompat;
-import android.support.v4.view.ViewCompat;
-import android.support.v4.view.accessibility.AccessibilityNodeInfoCompat;
-import android.support.v4.widget.ExploreByTouchHelper;
+import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.accessibility.AccessibilityNodeInfoCompat;
+import androidx.customview.widget.ExploreByTouchHelper;
 import android.text.format.DateFormat;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
@@ -54,12 +54,9 @@ import java.util.Locale;
 public abstract class MonthView extends View {
 
     protected static int DEFAULT_HEIGHT = 32;
-    protected static int MIN_HEIGHT = 10;
     protected static final int DEFAULT_SELECTED_DAY = -1;
     protected static final int DEFAULT_WEEK_START = Calendar.SUNDAY;
     protected static final int DEFAULT_NUM_DAYS = 7;
-    protected static final int DEFAULT_SHOW_WK_NUM = 0;
-    protected static final int DEFAULT_FOCUS_MONTH = -1;
     protected static final int DEFAULT_NUM_ROWS = 6;
     protected static final int MAX_NUM_ROWS = 6;
 
@@ -70,12 +67,10 @@ public abstract class MonthView extends View {
     protected static int MONTH_LABEL_TEXT_SIZE;
     protected static int MONTH_DAY_LABEL_TEXT_SIZE;
     protected static int MONTH_HEADER_SIZE;
+    protected static int MONTH_HEADER_SIZE_V2;
     protected static int DAY_SELECTED_CIRCLE_SIZE;
     protected static int DAY_HIGHLIGHT_CIRCLE_SIZE;
     protected static int DAY_HIGHLIGHT_CIRCLE_MARGIN;
-
-    // used for scaling to the device density
-    protected static float mScale = 0;
 
     protected DatePickerController mController;
 
@@ -91,13 +86,6 @@ public abstract class MonthView extends View {
     protected Paint mMonthDayLabelPaint;
 
     private final StringBuilder mStringBuilder;
-
-    // The Julian day of the first day displayed by this item
-    protected int mFirstJulianDay = -1;
-    // The month of the first day in this week
-    protected int mFirstMonth = -1;
-    // The month of the last day in this week
-    protected int mLastMonth = -1;
 
     protected int mMonth;
 
@@ -118,10 +106,6 @@ public abstract class MonthView extends View {
     protected int mNumDays = DEFAULT_NUM_DAYS;
     // The number of days + a spot for week number if it is displayed
     protected int mNumCells = mNumDays;
-    // The left edge of the selected day
-    protected int mSelectedLeft = -1;
-    // The right edge of the selected day
-    protected int mSelectedRight = -1;
 
     private final Calendar mCalendar;
     protected final Calendar mDayLabelCalendar;
@@ -154,8 +138,8 @@ public abstract class MonthView extends View {
         mController = controller;
         Resources res = context.getResources();
 
-        mDayLabelCalendar = Calendar.getInstance(mController.getTimeZone());
-        mCalendar = Calendar.getInstance(mController.getTimeZone());
+        mDayLabelCalendar = Calendar.getInstance(mController.getTimeZone(), mController.getLocale());
+        mCalendar = Calendar.getInstance(mController.getTimeZone(), mController.getLocale());
 
         mDayOfWeekTypeface = res.getString(R.string.mdtp_day_of_week_label_typeface);
         mMonthTitleTypeface = res.getString(R.string.mdtp_sans_serif);
@@ -182,15 +166,26 @@ public abstract class MonthView extends View {
         MONTH_LABEL_TEXT_SIZE = res.getDimensionPixelSize(R.dimen.mdtp_month_label_size);
         MONTH_DAY_LABEL_TEXT_SIZE = res.getDimensionPixelSize(R.dimen.mdtp_month_day_label_text_size);
         MONTH_HEADER_SIZE = res.getDimensionPixelOffset(R.dimen.mdtp_month_list_item_header_height);
-        DAY_SELECTED_CIRCLE_SIZE = res
-                .getDimensionPixelSize(R.dimen.mdtp_day_number_select_circle_radius);
+        MONTH_HEADER_SIZE_V2 = res.getDimensionPixelOffset(R.dimen.mdtp_month_list_item_header_height_v2);
+        DAY_SELECTED_CIRCLE_SIZE = mController.getVersion() == DatePickerDialog.Version.VERSION_1
+                ? res.getDimensionPixelSize(R.dimen.mdtp_day_number_select_circle_radius)
+                : res.getDimensionPixelSize(R.dimen.mdtp_day_number_select_circle_radius_v2);
         DAY_HIGHLIGHT_CIRCLE_SIZE = res
                 .getDimensionPixelSize(R.dimen.mdtp_day_highlight_circle_radius);
         DAY_HIGHLIGHT_CIRCLE_MARGIN = res
                 .getDimensionPixelSize(R.dimen.mdtp_day_highlight_circle_margin);
 
-        mRowHeight = (res.getDimensionPixelOffset(R.dimen.mdtp_date_picker_view_animator_height)
-                - getMonthHeaderSize()) / MAX_NUM_ROWS;
+        if (mController.getVersion() == DatePickerDialog.Version.VERSION_1) {
+            mRowHeight = (res.getDimensionPixelOffset(R.dimen.mdtp_date_picker_view_animator_height)
+                    - getMonthHeaderSize()) / MAX_NUM_ROWS;
+        } else {
+            mRowHeight = (res.getDimensionPixelOffset(R.dimen.mdtp_date_picker_view_animator_height_v2)
+                    - getMonthHeaderSize() - MONTH_DAY_LABEL_TEXT_SIZE * 2) / MAX_NUM_ROWS;
+        }
+
+        mEdgePadding = mController.getVersion() == DatePickerDialog.Version.VERSION_1
+                ? 0
+                : context.getResources().getDimensionPixelSize(R.dimen.mdtp_date_picker_view_animator_padding_v2);
 
         // Set up accessibility components.
         mTouchHelper = getMonthViewTouchHelper();
@@ -200,10 +195,6 @@ public abstract class MonthView extends View {
 
         // Sets up any standard paints that will be used
         initView();
-    }
-
-    public void setDatePickerController(DatePickerController controller) {
-        mController = controller;
     }
 
     protected MonthViewTouchHelper getMonthViewTouchHelper() {
@@ -226,10 +217,7 @@ public abstract class MonthView extends View {
     @Override
     public boolean dispatchHoverEvent(@NonNull MotionEvent event) {
         // First right-of-refusal goes the touch exploration helper.
-        if (mTouchHelper.dispatchHoverEvent(event)) {
-            return true;
-        }
-        return super.dispatchHoverEvent(event);
+        return mTouchHelper.dispatchHoverEvent(event) || super.dispatchHoverEvent(event);
     }
 
     @Override
@@ -251,7 +239,8 @@ public abstract class MonthView extends View {
      */
     protected void initView() {
         mMonthTitlePaint = new Paint();
-        mMonthTitlePaint.setFakeBoldText(true);
+        if (mController.getVersion() == DatePickerDialog.Version.VERSION_1)
+            mMonthTitlePaint.setFakeBoldText(true);
         mMonthTitlePaint.setAntiAlias(true);
         mMonthTitlePaint.setTextSize(MONTH_LABEL_TEXT_SIZE);
         mMonthTitlePaint.setTypeface(Typeface.create(mMonthTitleTypeface, Typeface.BOLD));
@@ -313,7 +302,7 @@ public abstract class MonthView extends View {
         // Figure out what day today is
         //final Time today = new Time(Time.getCurrentTimezone());
         //today.setToNow();
-        final Calendar today = Calendar.getInstance(mController.getTimeZone());
+        final Calendar today = Calendar.getInstance(mController.getTimeZone(), mController.getLocale());
         mHasToday = false;
         mToday = -1;
 
@@ -342,6 +331,7 @@ public abstract class MonthView extends View {
         mTouchHelper.invalidateRoot();
     }
 
+    @SuppressWarnings("unused")
     public void setSelectedDay(int day) {
         mSelectedDay = day;
     }
@@ -361,7 +351,7 @@ public abstract class MonthView extends View {
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        setMeasuredDimension(MeasureSpec.getSize(widthMeasureSpec), mRowHeight * mNumRows + getMonthHeaderSize() + 5);
+        setMeasuredDimension(MeasureSpec.getSize(widthMeasureSpec), mRowHeight * mNumRows + getMonthHeaderSize());
     }
 
     @Override
@@ -381,15 +371,39 @@ public abstract class MonthView extends View {
     }
 
     /**
+     * @return The height in pixels of a row of day labels
+     */
+    public int getMonthHeight() {
+        int scaleFactor = mController.getVersion() == DatePickerDialog.Version.VERSION_1 ? 2 : 3;
+        return getMonthHeaderSize() - MONTH_DAY_LABEL_TEXT_SIZE * scaleFactor;
+    }
+
+    /**
+     * @return The width in pixels of a day label
+     */
+    public int getCellWidth() {
+        return (mWidth - mEdgePadding * 2) / mNumDays;
+    }
+
+    /**
+     * @return The left / right padding used when calculating day number positions
+     */
+    public int getEdgePadding() {
+        return mEdgePadding;
+    }
+
+    /**
      * A wrapper to the MonthHeaderSize to allow override it in children
      */
     protected int getMonthHeaderSize() {
-        return MONTH_HEADER_SIZE;
+        return mController.getVersion() == DatePickerDialog.Version.VERSION_1
+                ? MONTH_HEADER_SIZE
+                : MONTH_HEADER_SIZE_V2;
     }
 
     @NonNull
     private String getMonthAndYearString() {
-        Locale locale = Locale.getDefault();
+        Locale locale = mController.getLocale();
         String pattern = "MMMM yyyy";
 
         if (Build.VERSION.SDK_INT < 18) pattern = getContext().getResources().getString(R.string.mdtp_date_v1_monthyear);
@@ -403,8 +417,10 @@ public abstract class MonthView extends View {
     }
 
     protected void drawMonthTitle(Canvas canvas) {
-        int x = (mWidth + 2 * mEdgePadding) / 2;
-        int y = (getMonthHeaderSize() - MONTH_DAY_LABEL_TEXT_SIZE) / 2;
+        int x = mWidth / 2;
+        int y = mController.getVersion() == DatePickerDialog.Version.VERSION_1
+                ? (getMonthHeaderSize() - MONTH_DAY_LABEL_TEXT_SIZE) / 2
+                : getMonthHeaderSize() / 2 - MONTH_DAY_LABEL_TEXT_SIZE;
         canvas.drawText(getMonthAndYearString(), x, y, mMonthTitlePaint);
     }
 
@@ -431,17 +447,18 @@ public abstract class MonthView extends View {
     protected void drawMonthNums(Canvas canvas) {
         int y = (((mRowHeight + MINI_DAY_NUMBER_TEXT_SIZE) / 2) - DAY_SEPARATOR_WIDTH)
                 + getMonthHeaderSize();
-        final float dayWidthHalf = (mWidth - mEdgePadding * 2) / (mNumDays * 2.0f);
+        // TODO: look at the calculations used by the framework picker to properly align this with the buttons
+        final int dayWidthHalf = (mWidth - mEdgePadding * 2) / (mNumDays * 2);
         int j = findDayOffset();
         for (int dayNumber = 1; dayNumber <= mNumCells; dayNumber++) {
-            final int x = (int) ((2 * j + 1) * dayWidthHalf + mEdgePadding);
+            final int x = (2 * j + 1) * dayWidthHalf + mEdgePadding;
 
             int yRelativeToDay = (mRowHeight + MINI_DAY_NUMBER_TEXT_SIZE) / 2 - DAY_SEPARATOR_WIDTH;
 
-            final int startX = (int) (x - dayWidthHalf);
-            final int stopX = (int) (x + dayWidthHalf);
-            final int startY = (int) (y - yRelativeToDay);
-            final int stopY = (int) (startY + mRowHeight);
+            final int startX = x - dayWidthHalf;
+            final int stopX = x + dayWidthHalf;
+            final int startY = y - yRelativeToDay;
+            final int stopY = startY + mRowHeight;
 
             drawMonthDay(canvas, mYear, mMonth, dayNumber, x, y, startX, stopX, startY, stopY);
 
@@ -528,7 +545,7 @@ public abstract class MonthView extends View {
 
 
         if (mOnDayClickListener != null) {
-            mOnDayClickListener.onDayClick(this, new CalendarDay(mYear, mMonth, day));
+            mOnDayClickListener.onDayClick(this, new CalendarDay(mYear, mMonth, day, mController.getTimeZone()));
         }
 
         // This is a no-op if accessibility is turned off.
@@ -536,9 +553,9 @@ public abstract class MonthView extends View {
     }
 
     /**
-     * @param year
-     * @param month
-     * @param day
+     * @param year as an int
+     * @param month as an int
+     * @param day as an int
      * @return true if the given date should be highlighted
      */
     protected boolean isHighlighted(int year, int month, int day) {
@@ -552,7 +569,7 @@ public abstract class MonthView extends View {
      * @return The weekday label
      */
     private String getWeekDayLabel(Calendar day) {
-        Locale locale = Locale.getDefault();
+        Locale locale = mController.getLocale();
 
         // Localised short version of the string is not available on API < 18
         if (Build.VERSION.SDK_INT < 18) {
@@ -599,9 +616,9 @@ public abstract class MonthView extends View {
      * has focus
      */
     public CalendarDay getAccessibilityFocus() {
-        final int day = mTouchHelper.getFocusedVirtualView();
+        final int day = mTouchHelper.getAccessibilityFocusedVirtualViewId();
         if (day >= 0) {
-            return new CalendarDay(mYear, mMonth, day);
+            return new CalendarDay(mYear, mMonth, day, mController.getTimeZone());
         }
         return null;
     }
@@ -639,17 +656,17 @@ public abstract class MonthView extends View {
         private final Rect mTempRect = new Rect();
         private final Calendar mTempCalendar = Calendar.getInstance(mController.getTimeZone());
 
-        public MonthViewTouchHelper(View host) {
+        MonthViewTouchHelper(View host) {
             super(host);
         }
 
-        public void setFocusedVirtualView(int virtualViewId) {
+        void setFocusedVirtualView(int virtualViewId) {
             getAccessibilityNodeProvider(MonthView.this).performAction(
                     virtualViewId, AccessibilityNodeInfoCompat.ACTION_ACCESSIBILITY_FOCUS, null);
         }
 
-        public void clearFocusedVirtualView() {
-            final int focusedVirtualView = getFocusedVirtualView();
+        void clearFocusedVirtualView() {
+            final int focusedVirtualView = getAccessibilityFocusedVirtualViewId();
             if (focusedVirtualView != ExploreByTouchHelper.INVALID_ID) {
                 getAccessibilityNodeProvider(MonthView.this).performAction(
                         focusedVirtualView,
@@ -675,18 +692,21 @@ public abstract class MonthView extends View {
         }
 
         @Override
-        protected void onPopulateEventForVirtualView(int virtualViewId, AccessibilityEvent event) {
+        protected void onPopulateEventForVirtualView(int virtualViewId, @NonNull AccessibilityEvent event) {
             event.setContentDescription(getItemDescription(virtualViewId));
         }
 
         @Override
         protected void onPopulateNodeForVirtualView(int virtualViewId,
-                                                    AccessibilityNodeInfoCompat node) {
+                                                    @NonNull AccessibilityNodeInfoCompat node) {
             getItemBounds(virtualViewId, mTempRect);
 
             node.setContentDescription(getItemDescription(virtualViewId));
             node.setBoundsInParent(mTempRect);
             node.addAction(AccessibilityNodeInfo.ACTION_CLICK);
+
+            // Flag non-selectable dates as disabled
+            node.setEnabled(!mController.isOutOfRange(mYear, mMonth, virtualViewId));
 
             if (virtualViewId == mSelectedDay) {
                 node.setSelected(true);
@@ -712,7 +732,7 @@ public abstract class MonthView extends View {
          * @param day  The day to calculate bounds for
          * @param rect The rectangle in which to store the bounds
          */
-        protected void getItemBounds(int day, Rect rect) {
+        void getItemBounds(int day, Rect rect) {
             final int offsetX = mEdgePadding;
             final int offsetY = getMonthHeaderSize();
             final int cellHeight = mRowHeight;
@@ -734,16 +754,9 @@ public abstract class MonthView extends View {
          * @param day The day to generate a description for
          * @return A description of the time object
          */
-        protected CharSequence getItemDescription(int day) {
+        CharSequence getItemDescription(int day) {
             mTempCalendar.set(mYear, mMonth, day);
-            final CharSequence date = DateFormat.format(DATE_FORMAT,
-                    mTempCalendar.getTimeInMillis());
-
-            if (day == mSelectedDay) {
-                return getContext().getString(R.string.mdtp_item_is_selected, date);
-            }
-
-            return date;
+            return DateFormat.format(DATE_FORMAT, mTempCalendar.getTimeInMillis());
         }
     }
 

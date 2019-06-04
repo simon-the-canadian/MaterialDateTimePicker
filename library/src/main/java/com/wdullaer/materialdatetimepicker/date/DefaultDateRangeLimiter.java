@@ -18,12 +18,11 @@ package com.wdullaer.materialdatetimepicker.date;
 
 import android.os.Parcel;
 import android.os.Parcelable;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.wdullaer.materialdatetimepicker.Utils;
 
-import java.util.Arrays;
 import java.util.Calendar;
 import java.util.HashSet;
 import java.util.TimeZone;
@@ -68,6 +67,7 @@ class DefaultDateRangeLimiter implements DateRangeLimiter {
         return 0;
     }
 
+    @SuppressWarnings("WeakerAccess")
     public static final Parcelable.Creator<DefaultDateRangeLimiter> CREATOR
             = new Parcelable.Creator<DefaultDateRangeLimiter>() {
         public DefaultDateRangeLimiter createFromParcel(Parcel in) {
@@ -80,13 +80,15 @@ class DefaultDateRangeLimiter implements DateRangeLimiter {
     };
 
     void setSelectableDays(@NonNull Calendar[] days) {
-        for (Calendar selectableDay : days) Utils.trimToMidnight(selectableDay);
-        this.selectableDays.addAll(Arrays.asList(days));
+        for (Calendar selectableDay : days) {
+            this.selectableDays.add(Utils.trimToMidnight((Calendar) selectableDay.clone()));
+        }
     }
 
     void setDisabledDays(@NonNull Calendar[] days) {
-        for (Calendar disabledDay : days) Utils.trimToMidnight(disabledDay);
-        this.disabledDays.addAll(Arrays.asList(days));
+        for (Calendar disabledDay : days) {
+            this.disabledDays.add(Utils.trimToMidnight((Calendar) disabledDay.clone()));
+        }
     }
 
     void setMinDate(@NonNull Calendar calendar) {
@@ -171,7 +173,8 @@ class DefaultDateRangeLimiter implements DateRangeLimiter {
      */
     @Override
     public boolean isOutOfRange(int year, int month, int day) {
-        Calendar date = Calendar.getInstance();
+        TimeZone timezone = mController == null ? TimeZone.getDefault() : mController.getTimeZone();
+        Calendar date = Calendar.getInstance(timezone);
         date.set(Calendar.YEAR, year);
         date.set(Calendar.MONTH, month);
         date.set(Calendar.DAY_OF_MONTH, day);
@@ -238,13 +241,23 @@ class DefaultDateRangeLimiter implements DateRangeLimiter {
             }
         }
 
-
-        if (mMinDate != null && isBeforeMin(calendar)) {
-            return (Calendar) mMinDate.clone();
+        TimeZone timezone = mController == null ? TimeZone.getDefault() : mController.getTimeZone();
+        if (isBeforeMin(calendar)) {
+            if (mMinDate != null) return (Calendar) mMinDate.clone();
+            Calendar output = Calendar.getInstance(timezone);
+            output.set(Calendar.YEAR, mMinYear);
+            output.set(Calendar.MONTH, Calendar.JANUARY);
+            output.set(Calendar.DAY_OF_MONTH, 1);
+            return Utils.trimToMidnight(output);
         }
 
-        if (mMaxDate != null && isAfterMax(calendar)) {
-            return (Calendar) mMaxDate.clone();
+        if (isAfterMax(calendar)) {
+            if (mMaxDate != null) return (Calendar) mMaxDate.clone();
+            Calendar output = Calendar.getInstance(timezone);
+            output.set(Calendar.YEAR, mMaxYear);
+            output.set(Calendar.MONTH, Calendar.DECEMBER);
+            output.set(Calendar.DAY_OF_MONTH, 31);
+            return Utils.trimToMidnight(output);
         }
 
         return calendar;

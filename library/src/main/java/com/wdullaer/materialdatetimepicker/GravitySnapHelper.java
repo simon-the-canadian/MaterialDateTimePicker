@@ -18,13 +18,13 @@
 package com.wdullaer.materialdatetimepicker;
 
 import android.os.Build;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.LinearSnapHelper;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.LinearSnapHelper;
 
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.v7.widget.OrientationHelper;
-import android.support.v7.widget.RecyclerView;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.recyclerview.widget.OrientationHelper;
+import androidx.recyclerview.widget.RecyclerView;
 import android.view.Gravity;
 import android.view.View;
 
@@ -43,12 +43,12 @@ public class GravitySnapHelper extends LinearSnapHelper {
     private boolean snapping;
     private RecyclerView.OnScrollListener mScrollListener = new RecyclerView.OnScrollListener() {
         @Override
-        public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
+        public void onScrollStateChanged(@NonNull RecyclerView recyclerView, int newState) {
             super.onScrollStateChanged(recyclerView, newState);
             if (newState == RecyclerView.SCROLL_STATE_SETTLING) {
                 snapping = false;
             }
-            if (newState == RecyclerView.SCROLL_STATE_IDLE && snapping && listener != null) {
+            if (newState == RecyclerView.SCROLL_STATE_IDLE && listener != null) {
                 int position = getSnappedPosition(recyclerView);
                 if (position != RecyclerView.NO_POSITION) {
                     listener.onSnap(position);
@@ -58,6 +58,7 @@ public class GravitySnapHelper extends LinearSnapHelper {
         }
     };
 
+    @SuppressWarnings("unused")
     public GravitySnapHelper(int gravity) {
         this(gravity, null);
     }

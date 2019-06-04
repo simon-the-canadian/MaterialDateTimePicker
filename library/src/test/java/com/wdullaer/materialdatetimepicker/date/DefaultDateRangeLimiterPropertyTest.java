@@ -11,6 +11,7 @@ import org.junit.runner.RunWith;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Locale;
 import java.util.TimeZone;
 
 /**
@@ -90,6 +91,21 @@ public class DefaultDateRangeLimiterPropertyTest {
         public TimeZone getTimeZone() {
             return TimeZone.getDefault();
         }
+
+        @Override
+        public Locale getLocale() {
+            return Locale.getDefault();
+        }
+
+        @Override
+        public DatePickerDialog.Version getVersion() {
+            return DatePickerDialog.Version.VERSION_2;
+        }
+
+        @Override
+        public DatePickerDialog.ScrollOrientation getScrollOrientation() {
+            return DatePickerDialog.ScrollOrientation.HORIZONTAL;
+        }
     };
 
     private static Calendar[] datesToCalendars(Date[] dates) {
@@ -105,8 +121,8 @@ public class DefaultDateRangeLimiterPropertyTest {
 
     @Property
     public void setToNearestShouldBeInSelectableDays(
-            @InRange(min = "01/01/1800", max = "12/31/2099", format = "MM/dd/yyyy") Date date,
-            @InRange(min = "01/01/1800", max = "12/31/2099", format = "MM/dd/yyyy") Date[] dates
+            @InRange(min = "01/01/1900", max = "12/31/2099", format = "MM/dd/yyyy") Date date,
+            @InRange(min = "01/01/1900", max = "12/31/2099", format = "MM/dd/yyyy") Date[] dates
     ) {
         DefaultDateRangeLimiter limiter = new DefaultDateRangeLimiter();
 
@@ -116,7 +132,12 @@ public class DefaultDateRangeLimiterPropertyTest {
         Calendar[] selectables = datesToCalendars(dates);
 
         limiter.setSelectableDays(selectables);
-        if (selectables.length == 0) Assert.assertEquals(
+
+        // selectableDays are manipulated a bit by the limiter
+        selectables = limiter.getSelectableDays();
+
+        // selectables == null when the input is empty
+        if (selectables == null) Assert.assertEquals(
                 day.getTimeInMillis(),
                 limiter.setToNearestDate(day).getTimeInMillis()
         );
@@ -125,8 +146,8 @@ public class DefaultDateRangeLimiterPropertyTest {
 
     @Property
     public void setToNearestShouldNeverBeInDisabledDays(
-            @InRange(min = "01/01/1800", max = "12/31/2099", format = "MM/dd/yyyy") Date date,
-            @InRange(min = "01/01/1800", max = "12/31/2099", format = "MM/dd/yyyy") Date[] dates
+            @InRange(min = "01/01/1900", max = "12/31/2099", format = "MM/dd/yyyy") Date date,
+            @InRange(min = "01/01/1900", max = "12/31/2099", format = "MM/dd/yyyy") Date[] dates
     ) {
         DefaultDateRangeLimiter limiter = new DefaultDateRangeLimiter();
 
@@ -141,8 +162,8 @@ public class DefaultDateRangeLimiterPropertyTest {
 
     @Property
     public void setToNearestShouldNeverBeBelowMinDate(
-            @InRange(min = "01/01/1800", max = "12/31/2099", format = "MM/dd/yyyy") Date date,
-            @InRange(min = "01/01/1800", max = "12/31/2099", format = "MM/dd/yyyy") Date minDate
+            @InRange(min = "01/01/1900", max = "12/31/2099", format = "MM/dd/yyyy") Date date,
+            @InRange(min = "01/01/1900", max = "12/31/2099", format = "MM/dd/yyyy") Date minDate
     ) {
         DefaultDateRangeLimiter limiter = new DefaultDateRangeLimiter();
 
@@ -166,9 +187,16 @@ public class DefaultDateRangeLimiterPropertyTest {
         Calendar day = Calendar.getInstance();
         day.setTime(date);
 
+        Calendar minDay = Calendar.getInstance();
+        minDay.set(Calendar.YEAR, 1800);
+        minDay.set(Calendar.MONTH, Calendar.JANUARY);
+        minDay.set(Calendar.DAY_OF_MONTH, 1);
+        Utils.trimToMidnight(minDay);
+
         Calendar maxDay = Calendar.getInstance();
         maxDay.setTime(maxDate);
 
+        limiter.setMinDate(minDay);
         limiter.setMaxDate(maxDay);
         Assert.assertTrue(Utils.trimToMidnight(maxDay).getTimeInMillis() >= limiter.setToNearestDate(day).getTimeInMillis());
     }

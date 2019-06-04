@@ -7,6 +7,7 @@ import org.junit.Assert;
 
 import java.util.Arrays;
 import java.util.Calendar;
+import java.util.Locale;
 import java.util.TimeZone;
 
 /**
@@ -85,6 +86,21 @@ public class DefaultDateRangeLimiterTest {
         @Override
         public TimeZone getTimeZone() {
             return TimeZone.getDefault();
+        }
+
+        @Override
+        public Locale getLocale() {
+            return Locale.getDefault();
+        }
+
+        @Override
+        public DatePickerDialog.Version getVersion() {
+            return DatePickerDialog.Version.VERSION_2;
+        }
+
+        @Override
+        public DatePickerDialog.ScrollOrientation getScrollOrientation() {
+            return DatePickerDialog.ScrollOrientation.HORIZONTAL;
         }
     };
 
@@ -195,6 +211,10 @@ public class DefaultDateRangeLimiterTest {
 
         limiter.setSelectableDays(days);
 
+        // selectableDays are manipulated a bit by the limiter
+        days = limiter.getSelectableDays();
+
+        Assert.assertNotNull(days);
         Assert.assertEquals(limiter.getStartDate().getTimeInMillis(), days[0].getTimeInMillis());
     }
 
@@ -234,6 +254,10 @@ public class DefaultDateRangeLimiterTest {
         limiter.setSelectableDays(days);
         limiter.setMinDate(minDate);
 
+        // selectableDays are manipulated a bit by the limiter
+        days = limiter.getSelectableDays();
+
+        Assert.assertNotNull(days);
         Assert.assertEquals(limiter.getStartDate().getTimeInMillis(), days[0].getTimeInMillis());
     }
 
@@ -249,6 +273,10 @@ public class DefaultDateRangeLimiterTest {
 
         limiter.setSelectableDays(days);
 
+        // selectableDays are manipulated a bit by the limiter
+        days = limiter.getSelectableDays();
+
+        Assert.assertNotNull(days);
         Assert.assertEquals(limiter.getEndDate().getTimeInMillis(), days[days.length - 1].getTimeInMillis());
     }
 
@@ -288,6 +316,10 @@ public class DefaultDateRangeLimiterTest {
         limiter.setSelectableDays(days);
         limiter.setMinDate(maxDate);
 
+        // selectableDays are manipulated a bit by the limiter
+        days = limiter.getSelectableDays();
+
+        Assert.assertNotNull(days);
         Assert.assertEquals(limiter.getEndDate().getTimeInMillis(), days[days.length - 1].getTimeInMillis());
     }
 
@@ -403,6 +435,116 @@ public class DefaultDateRangeLimiterTest {
         Assert.assertTrue(limiter.isOutOfRange(year, month, dayNumber));
     }
 
+    @Test
+    public void isOutOfRangeShouldWorkWithCustomTimeZones() {
+        final String timeZoneString = "America/Los_Angeles";
+        TimeZone timeZone = TimeZone.getTimeZone(timeZoneString);
+        DefaultDateRangeLimiter limiter = new DefaultDateRangeLimiter();
+
+        int year = 1985;
+        int month = 1;
+        int day = 1;
+        Calendar disabledDay = Calendar.getInstance(timeZone);
+        disabledDay.set(Calendar.YEAR, year);
+        disabledDay.set(Calendar.MONTH, month);
+        disabledDay.set(Calendar.DAY_OF_MONTH, day);
+        Calendar[] days = new Calendar[1];
+        days[0] = disabledDay;
+        DatePickerController controller = new DatePickerController() {
+            @Override
+            public void onYearSelected(int year) {}
+
+            @Override
+            public void onDayOfMonthSelected(int year, int month, int day) {}
+
+            @Override
+            public void registerOnDateChangedListener(DatePickerDialog.OnDateChangedListener listener) {}
+
+            @Override
+            public void unregisterOnDateChangedListener(DatePickerDialog.OnDateChangedListener listener) {}
+
+            @Override
+            public MonthAdapter.CalendarDay getSelectedDay() {
+                return null;
+            }
+
+            @Override
+            public boolean isThemeDark() {
+                return false;
+            }
+
+            @Override
+            public int getAccentColor() {
+                return 0;
+            }
+
+            @Override
+            public boolean isHighlighted(int year, int month, int day) {
+                return false;
+            }
+
+            @Override
+            public int getFirstDayOfWeek() {
+                return 0;
+            }
+
+            @Override
+            public int getMinYear() {
+                return 0;
+            }
+
+            @Override
+            public int getMaxYear() {
+                return 0;
+            }
+
+            @Override
+            public Calendar getStartDate() {
+                return null;
+            }
+
+            @Override
+            public Calendar getEndDate() {
+                return null;
+            }
+
+            @Override
+            public boolean isOutOfRange(int year, int month, int day) {
+                return false;
+            }
+
+            @Override
+            public void tryVibrate() {
+
+            }
+
+            @Override
+            public TimeZone getTimeZone() {
+                return TimeZone.getTimeZone(timeZoneString);
+            }
+
+            @Override
+            public Locale getLocale() {
+                return Locale.getDefault();
+            }
+
+            @Override
+            public DatePickerDialog.Version getVersion() {
+                return null;
+            }
+
+            @Override
+            public DatePickerDialog.ScrollOrientation getScrollOrientation() {
+                return null;
+            }
+        };
+
+        limiter.setDisabledDays(days);
+        limiter.setController(controller);
+
+        Assert.assertTrue(limiter.isOutOfRange(year, month, day));
+    }
+
     // setToNearestDate()
     @Test
     public void setToNearestShouldReturnTheInputWhenValid() {
@@ -484,6 +626,10 @@ public class DefaultDateRangeLimiterTest {
         limiter.setSelectableDays(days);
         Calendar day = Calendar.getInstance();
 
+        // selectableDays are manipulated a bit by the limiter
+        days = limiter.getSelectableDays();
+
+        Assert.assertNotNull(days);
         Assert.assertTrue(Arrays.asList(days).contains(limiter.setToNearestDate(day)));
     }
 
@@ -505,6 +651,50 @@ public class DefaultDateRangeLimiterTest {
         limiter.setSelectableDays(days);
         Calendar day = Calendar.getInstance();
 
+        // selectableDays are manipulated a bit by the limiter
+        days = limiter.getSelectableDays();
+
+        Assert.assertNotNull(days);
         Assert.assertTrue(Arrays.asList(days).contains(limiter.setToNearestDate(day)));
+    }
+
+    @Test
+    public void setToNearestShouldRoundToFirstJanOfMinYearWhenBeforeMin() {
+        // Case with just year range and no other restrictions
+        DefaultDateRangeLimiter limiter = new DefaultDateRangeLimiter();
+
+        limiter.setYearRange(1980, 2100);
+        Calendar day = Calendar.getInstance();
+        day.set(Calendar.YEAR, 1970);
+
+        Calendar expectedDay = Calendar.getInstance();
+        expectedDay.set(Calendar.YEAR, 1980);
+        expectedDay.set(Calendar.MONTH, Calendar.JANUARY);
+        expectedDay.set(Calendar.DAY_OF_MONTH, 1);
+
+        Assert.assertEquals(
+                Utils.trimToMidnight(expectedDay).getTimeInMillis(),
+                limiter.setToNearestDate(day).getTimeInMillis()
+        );
+    }
+
+    @Test
+    public void setToNearestShouldReturn31stDecOfMaxYearWhenAfterMax() {
+        // Case with just year range and no other restrictions
+        DefaultDateRangeLimiter limiter = new DefaultDateRangeLimiter();
+
+        limiter.setYearRange(1900, 1950);
+        Calendar day = Calendar.getInstance();
+        day.set(Calendar.YEAR, 1970);
+
+        Calendar expectedDay = Calendar.getInstance();
+        expectedDay.set(Calendar.YEAR, 1950);
+        expectedDay.set(Calendar.MONTH, Calendar.DECEMBER);
+        expectedDay.set(Calendar.DAY_OF_MONTH, 31);
+
+        Assert.assertEquals(
+                Utils.trimToMidnight(expectedDay).getTimeInMillis(),
+                limiter.setToNearestDate(day).getTimeInMillis()
+        );
     }
 }
