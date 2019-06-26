@@ -639,6 +639,14 @@ public class TimePickerDialog extends AppCompatDialogFragment implements
         mLimiter = limiter;
     }
 
+    /**
+     * Does not disable the minutes when rounding by an interval.
+     * Instead the minutes selector will move to the closest valid minute.
+     */
+    public void useCustomMinuteRoundingLimiter() {
+        mDefaultLimiter = new CustomRoundingTimepointLimiter();
+    }
+
     @Override
     public Version getVersion() {
         return mVersion;
