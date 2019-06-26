@@ -2,11 +2,12 @@ package com.wdullaer.materialdatetimepicker.time;
 
 import android.os.Parcel;
 import android.os.Parcelable;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 
 import java.util.Arrays;
 import java.util.TreeSet;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import static com.wdullaer.materialdatetimepicker.time.TimePickerDialog.HOUR_INDEX;
 import static com.wdullaer.materialdatetimepicker.time.TimePickerDialog.MINUTE_INDEX;
@@ -18,11 +19,11 @@ import static com.wdullaer.materialdatetimepicker.time.TimePickerDialog.MINUTE_I
  */
 
 class DefaultTimepointLimiter implements TimepointLimiter {
-    private TreeSet<Timepoint> mSelectableTimes = new TreeSet<>();
-    private TreeSet<Timepoint> mDisabledTimes = new TreeSet<>();
-    private TreeSet<Timepoint> exclusiveSelectableTimes = new TreeSet<>();
-    private Timepoint mMinTime;
-    private Timepoint mMaxTime;
+    TreeSet<Timepoint> mSelectableTimes = new TreeSet<>();
+    TreeSet<Timepoint> mDisabledTimes = new TreeSet<>();
+    TreeSet<Timepoint> exclusiveSelectableTimes = new TreeSet<>();
+    Timepoint mMinTime;
+    Timepoint mMaxTime;
 
     DefaultTimepointLimiter() {}
 
