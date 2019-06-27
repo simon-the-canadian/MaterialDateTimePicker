@@ -645,6 +645,7 @@ public class TimePickerDialog extends AppCompatDialogFragment implements
      */
     public void useCustomMinuteRoundingLimiter() {
         mDefaultLimiter = new CustomRoundingTimepointLimiter();
+        mLimiter = mDefaultLimiter;
     }
 
     @Override
